@@ -379,14 +379,12 @@ fn user_install_dotfiles() -> std::io::Result<String> {
 }
 
 fn user_extras() -> std::io::Result<String> {
-    let username: String = get_current_username().unwrap().to_str().unwrap().into();
+    let username: &str = get_current_username().unwrap().to_str().unwrap();
 
     let commands = vec![
         "sudo systemctl enable --now bluetooth && sudo systemctl enable sddm",
         "systemctl --user enable --now pipewire",
         "systemctl enable --now pipewire-pulse",
-        format!("echo -e '[Autologin]\nUser={}\nSession=hyprland' | sudo tee -a /etc/sddm.conf", username)
-        format!("sudo groupadd autologin && sudo usermod -aG autologin {}", username)
         "sudo timedatectl set-ntp true && sudo timedatectl set-timezone Europe/Amsterdam",
     ];
 
@@ -410,14 +408,14 @@ fn user_extras() -> std::io::Result<String> {
 }
 
 fn user_extras_stetsed() -> std::io::Result<String> {
-    let username: String = get_current_username().unwrap().to_str().unwrap().into();
-
     let commands = vec![
         "echo '10.4.78.251:/mnt/Vault/Storage /mnt/data nfs defaults,_netdev,x-systemd.automount,x-systemd.mount-timeout=10,noauto 0 0' | sudo tee -a /etc/fstab",
         "sudo mkdir /mnt/data",
-        "sudo mount -t nfs 10.4.78.251:/mnt/Vault/Storage /mnt/data"
+        "sudo mount -t nfs 10.4.78.251:/mnt/Vault/Storage /mnt/data",
         "ln -s /mnt/data/Stetsed/Storage ~/Storage",
         "ln -s /mnt/data/Stetsed/Documents ~/Documents",
+        "echo -e '[Autologin]\nUser={}\nSession=hyprland' | sudo tee -a /etc/sddm.conf",
+        "sudo groupadd autologin && sudo usermod -aG autologin {}",
     ];
 
     for command in commands {
