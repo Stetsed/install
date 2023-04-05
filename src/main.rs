@@ -4,6 +4,7 @@ use std::process::Command;
 use std::fs;
 use std::thread;
 use std::time::Duration;
+use users::{get_current_username};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -234,6 +235,8 @@ fn chroot() {
     io::stdin().read_line(&mut password);
 
     chroot_install(username.trim(), password.trim());
+
+    std::process::exit(0);
 }
 
 fn chroot_install(username: &str, password: &str) -> std::io::Result<String> {
@@ -242,7 +245,7 @@ fn chroot_install(username: &str, password: &str) -> std::io::Result<String> {
         "pacman-key -r DDF7DB817396A49B2A2723F7403BD972F75D9D76".to_string(),
         "pacman-key --lsign-key DDF7DB817396A49B2A2723F7403BD972F75D9D76".to_string(),
         "pacman -Syu --noconfirm".to_string(),
-        "pacman -S linux-headers zfs-dkms openssh networkmanager fish".to_string(),
+        "pacman -S linux-headers zfs-dkms openssh networkmanager fish git".to_string(),
         format!("useradd -m -G wheel -s /usr/bin/fish {}", username),
         format!("(echo '{}'; echo '{}') | passwd {}", password, password, username),
         "zpool set cachefile=/etc/zfs/zpool.cache".to_string(),
@@ -273,16 +276,39 @@ fn chroot_install(username: &str, password: &str) -> std::io::Result<String> {
         }
 
         println!("{}", String::from_utf8_lossy(&output.stdout));
-
-        thread::sleep(Duration::from_secs(3));
     }
 
 
     Ok(format!("Chroot Install Done"))
 }
 
-fn user() {
 
+fn user(){
+    yay_packages();
+}
+
+fn yay_packages() -> std::io::Result<String>  {
+    let commands = vec![
+        "git clone https://aur.archlinux.org/yay-bin.git".to_string(),
+        "cd yay-bin && makepkg -s && sudo pacman -U --noconfirm yay-bin* && cd .. && rm -rf yay-bin".to_string(),
+        "yay -Syu --noconfirm --answerdiff=None ripgrep unzip bat pavucontrol pipewire-pulse dunst bluedevil bluez-utils brightnessctl grimblast-git neovim network-manager-applet rofi-lbonn-wayland-git starship thunar thunar-archive-plugin thunar-volman  webcord-bin wl-clipboard librewolf-bin neofetch swaybg waybar-hyprland-git nfs-utils btop tldr swaylock-effects obsidian fish hyprland-bin npm xdg-desktop-portal-hyprland-git exa noto-fonts-emoji qt5-wayland qt6-wayland blueman swappy playerctl wlogout sddm-git nano ttf-jetbrains-mono-nerd lazygit swayidle".to_string(),
+    ];
+
+    for command in commands {
+        let output = Command::new("sh")
+            .arg("-c")
+            .arg(&command)
+            .output()
+            .expect("Failed to execute command");
+
+        if !output.status.success() {
+            eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
+            std::process::exit(1);
+        }
+
+        println!("{}", String::from_utf8_lossy(&output.stdout));
+    }
+    Ok(format!("Yay and Packages Installed"))
 }
 
 fn transfer() {
