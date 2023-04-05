@@ -285,6 +285,8 @@ fn chroot_install(username: &str, password: &str) -> std::io::Result<String> {
 
 fn user(){
     yay_packages();
+
+    install_dotfiles();
 }
 
 fn yay_packages() -> std::io::Result<String>  {
@@ -309,6 +311,52 @@ fn yay_packages() -> std::io::Result<String>  {
         println!("{}", String::from_utf8_lossy(&output.stdout));
     }
     Ok(format!("Yay and Packages Installed"))
+}
+
+fn install_dotfiles() -> std::io::Result<String> {
+    let mut dotfiles_url = String::new();
+    let mut ssh_url = String::new();
+    // Ask the user if they want to use Stetsed's Dotfiles
+    let mut input = String::new();
+    print!("Do you want to use Stetsed's Dotfiles? (y/n): ");
+    io::stdout().flush().unwrap();
+    io::stdin().read_line(&mut input).unwrap();
+
+    if input.trim().eq_ignore_ascii_case("y") {
+        let dotfiles_url = "https://github.com/Stetsed/.dotfiles.git".to_owned();
+        let ssh_url = "git@github.com:Stetsed/.dotfiles.git".to_owned();
+    } else {
+        // Ask the user for their github dotfiles repository
+        print!("Enter your github dotfiles repository (username/repository_name): ");
+        let mut dotfiles_repo = String::new();
+        io::stdout().flush().unwrap();
+        io::stdin().read_line(&mut dotfiles_repo).unwrap();
+        let dotfiles_repo_trim = dotfiles_repo.trim().to_owned();
+        dotfiles_url = format!("https://github.com/{}.git", dotfiles_repo_trim);
+        ssh_url = format!("git@github.com:{}.git", dotfiles_repo_trim);
+    }
+
+    let commands = vec![
+        format!("git clone --bare {} $HOME/.dotfiles", dotfiles_url),
+        format!("function config {{ /usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME $@ }} && config checkout -f && config status.showUntrackedFiles no && config remote set-url origin {}", ssh_url),
+    ];
+
+    for command in commands {
+        let output = Command::new("sh")
+            .arg("-c")
+            .arg(&command)
+            .output()
+            .expect("Failed to execute command");
+
+        if !output.status.success() {
+            eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
+            std::process::exit(1);
+        }
+
+        println!("{}", String::from_utf8_lossy(&output.stdout));
+    }
+
+    Ok(format!("Dotfiles Installed"))
 }
 
 fn transfer() {
