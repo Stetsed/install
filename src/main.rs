@@ -2,7 +2,6 @@ use std::io::{self, Write};
 use std::env;
 use std::process::Command;
 use std::fs;
-use std::num::ParseIntError;
 use std::thread;
 use std::time::Duration;
 
@@ -46,18 +45,18 @@ fn no_flag_passed(){
 }
 
 fn zfs() {
-    ZFS_Get_ZFS();
+    zfs_get_zfs();
 
-    let Selected_Drive = ZFS_Select_Drive().unwrap_or_else(|err| {
+    let selected_drive = zfs_select_drive().unwrap_or_else(|err| {
         eprintln!("Failed to select drive: {}", err);
         String::new()
     });
 
-    ZFS_Partition_Drive(&Selected_Drive);
+    zfs_partition_drive(&selected_drive);
 
-    ZFS_Setup_Filesystem(&Selected_Drive);
+    zfs_setup_filesystem(&selected_drive);
 
-    ZFS_Setup_Basesystem();
+    zfs_setup_basesystem();
 
     println!("ZFS and Chroot is now finished, press enter to reboot");
 
@@ -78,7 +77,7 @@ fn zfs() {
     }
 }
 
-fn ZFS_Get_ZFS() -> std::io::Result<String> {
+fn zfs_get_zfs() -> std::io::Result<String> {
     let output = Command::new("curl")
         .arg("-s")
         .arg("https://raw.githubusercontent.com/eoli3n/archiso-zfs/master/init")
@@ -91,7 +90,7 @@ fn ZFS_Get_ZFS() -> std::io::Result<String> {
 }
 
 
-fn ZFS_Select_Drive() -> Result<String, std::io::Error> {
+fn zfs_select_drive() -> Result<String, std::io::Error> {
     let devices_dir = "/dev/disk/by-id";
 
     // Get a list of devices in the directory
@@ -128,13 +127,13 @@ fn ZFS_Select_Drive() -> Result<String, std::io::Error> {
     Ok(selected_device.clone())
 }
 
-fn ZFS_Partition_Drive(Drive: &str) -> std::io::Result<String> {
+fn zfs_partition_drive(drive: &str) -> std::io::Result<String> {
     let commands = vec![
-        format!("zpool labelclear -f /dev/disk/by-id/{}", Drive),
-        format!("blkdiscard /dev/disk/by-id/{}", Drive),
-        format!("sgdisk -n 1:0:+512M -t 1:EF00 -c 1:EFI /dev/disk/by-id/{}", Drive),
-        format!("sgdisk -n 2:0:0 -t 2:BF01 -c 2:ZFS /dev/disk/by-id/{}", Drive),
-        format!("mkfs.vfat -F32 /dev/disk/by-id/{}-part1", Drive),
+        format!("zpool labelclear -f /dev/disk/by-id/{}", drive),
+        format!("blkdiscard /dev/disk/by-id/{}", drive),
+        format!("sgdisk -n 1:0:+512M -t 1:EF00 -c 1:EFI /dev/disk/by-id/{}",drive),
+        format!("sgdisk -n 2:0:0 -t 2:BF01 -c 2:ZFS /dev/disk/by-id/{}", drive),
+        format!("mkfs.vfat -F32 /dev/disk/by-id/{}-part1", drive),
     ];
 
     for command in commands {
@@ -156,9 +155,9 @@ fn ZFS_Partition_Drive(Drive: &str) -> std::io::Result<String> {
     Ok(format!("Disk Formatted"))
 }
 
-fn ZFS_Setup_Filesystem(Drive: &str) -> std::io::Result<String> {
+fn zfs_setup_filesystem(drive: &str) -> std::io::Result<String> {
     let commands = vec![
-        format!("zpool create -f -o ashift=12 -O canmount=off -O acltype=posixacl -O compression=on -O atime=off -O xattr=sa zroot /dev/disk/by-id/{}", Drive),
+        format!("zpool create -f -o ashift=12 -O canmount=off -O acltype=posixacl -O compression=on -O atime=off -O xattr=sa zroot /dev/disk/by-id/{}", drive),
         "zfs create -o canmount=off -o mountpoint=none zroot/ROOT".to_string(),
         "zfs create -o canmount=noauto -o mountpoint=/ zroot/ROOT/default".to_string(),
         "zfs create -o mountpoint=none zroot/data".to_string(),
@@ -167,9 +166,10 @@ fn ZFS_Setup_Filesystem(Drive: &str) -> std::io::Result<String> {
         "zpool export zroot".to_string(),
         "zpool import -d /dev/disk/by-id -R /mnt zroot".to_string(),
         "zfs mount zroot/ROOT/default".to_string(),
+        "zfs mount zroot/data/home".to_string(),
         "zpool set bootfs=zroot/ROOT/default zroot".to_string(),
         "mkdir /mnt/boot".to_string(),
-        format!("mount /dev/disk/by-id/{}-part1 /mnt/boot", Drive),
+        format!("mount /dev/disk/by-id/{}-part1 /mnt/boot", drive),
         "mkdir /mnt/etc".to_string(),
     ];
 
@@ -194,7 +194,7 @@ fn ZFS_Setup_Filesystem(Drive: &str) -> std::io::Result<String> {
     Ok(format!("Setup ZFS Filesystem"))
 }
 
-fn ZFS_Setup_Basesystem() -> std::io::Result<String> {
+fn zfs_setup_basesystem() -> std::io::Result<String> {
     let commands = vec![
         "genfstab -U /mnt >> /mnt/etc/fstab".to_string(),
         "pacstrap /mnt base base-devel linux linux-firmware neovim networkmanager intel-ucode".to_string(),
@@ -224,18 +224,30 @@ fn ZFS_Setup_Basesystem() -> std::io::Result<String> {
 }
 
 fn chroot() {
-    Chroot_Install();
+    print!("Enter username: ");
+    io::stdout().flush()?;
+    let mut username = String::new();
+    io::stdin().read_line(&mut username)?;
+
+    print!("Enter password: ");
+    io::stdout().flush()?;
+    let mut password = String::new();
+    io::stdin().read_line(&mut password)?;
+
+    chroot_install(username.trim(), password.trim())?;
+
+    chroot_install();
 }
 
-fn Chroot_Install() -> std::io::Result<String> {
+fn chroot_install(username: &str, password: &str) -> std::io::Result<String> {
     let commands = vec![
         "echo -e '[archzfs]\nServer = https://archzfs.com/$repo/$arch' >>/etc/pacman.conf".to_string(),
         "pacman-key -r DDF7DB817396A49B2A2723F7403BD972F75D9D76".to_string(),
         "pacman-key --lsign-key DDF7DB817396A49B2A2723F7403BD972F75D9D76".to_string(),
         "pacman -Syu --noconfirm".to_string(),
         "pacman -S linux-headers zfs-dkms openssh networkmanager fish".to_string(),
-        "useradd -m -G wheel -s /usr/bin/fish stetsed".to_string(),
-        "(echo 'BlahBlah' echo 'BlahBlah') | passwd stetsed".to_string(),
+        format!("useradd -m -G wheel -s /usr/bin/fish {}", username),
+        format!("(echo '{}'; echo '{}') | passwd {}", password, password, username),
         "zpool set cachefile=/etc/zfs/zpool.cache".to_string(),
         "bootctl install".to_string(),
         "systemctl enable NetworkManager".to_string(),
@@ -273,8 +285,7 @@ fn Chroot_Install() -> std::io::Result<String> {
 }
 
 fn user() {
-    println!("You chose User");
-    // Run User function here
+
 }
 
 fn transfer() {
