@@ -5,6 +5,7 @@ use std::fs;
 use std::thread;
 use std::time::Duration;
 use users::{get_current_username};
+use std::ffi::OsString;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -284,16 +285,30 @@ fn chroot_install(username: &str, password: &str) -> std::io::Result<String> {
 
 
 fn user(){
-    //yay_packages();
+    //user_yay_packages();
 
-    install_dotfiles();
+    //user_install_dotfiles();
+
+    user_extras();
+
+    // Ask the user if they want to use Stetsed's Dotfiles
+    let mut input = String::new();
+    print!("Do you want to use Stetsed's Home Configuration(Say no if your not Stetsed)? (y/n): ");
+    io::stdout().flush().unwrap();
+    io::stdin().read_line(&mut input).unwrap();
+
+    if input.trim().eq_ignore_ascii_case("y") {
+        user_extras_stetsed();
+    }
+    
+    print!("Thank you for using Stetsed's Installer! Hope it helped you! :");
 }
 
-fn yay_packages() -> std::io::Result<String>  {
+fn user_yay_packages() -> std::io::Result<String>  {
     let commands = vec![
         "git clone https://aur.archlinux.org/yay-bin.git".to_string(),
         "cd yay-bin && makepkg -s && sudo pacman -U --noconfirm yay-bin* && cd .. && rm -rf yay-bin".to_string(),
-        "yay -Syu --noconfirm --answerdiff=None ripgrep unzip bat pavucontrol pipewire-pulse dunst bluedevil bluez-utils brightnessctl grimblast-git neovim network-manager-applet rofi-lbonn-wayland-git starship thunar thunar-archive-plugin thunar-volman  webcord-bin wl-clipboard librewolf-bin neofetch swaybg waybar-hyprland-git nfs-utils btop tldr swaylock-effects obsidian fish hyprland-bin npm xdg-desktop-portal-hyprland-git exa noto-fonts-emoji qt5-wayland qt6-wayland blueman swappy playerctl wlogout sddm-git nano ttf-jetbrains-mono-nerd lazygit swayidle".to_string(),
+        "yay -Syu --noconfirm --answerdiff=None nfs-utils ripgrep unzip bat pavucontrol pipewire-pulse dunst bluedevil bluez-utils brightnessctl grimblast-git neovim network-manager-applet rofi-lbonn-wayland-git starship thunar thunar-archive-plugin thunar-volman  webcord-bin wl-clipboard librewolf-bin neofetch swaybg waybar-hyprland-git nfs-utils btop tldr swaylock-effects obsidian fish hyprland-bin npm xdg-desktop-portal-hyprland-git exa noto-fonts-emoji qt5-wayland qt6-wayland blueman swappy playerctl wlogout sddm-git nano ttf-jetbrains-mono-nerd lazygit swayidle".to_string(),
     ];
 
     for command in commands {
@@ -313,7 +328,7 @@ fn yay_packages() -> std::io::Result<String>  {
     Ok(format!("Yay and Packages Installed"))
 }
 
-fn install_dotfiles() -> std::io::Result<String> {
+fn user_install_dotfiles() -> std::io::Result<String> {
     let mut dotfiles_url = String::new();
     let mut ssh_url = String::new();
     // Ask the user if they want to use Stetsed's Dotfiles
@@ -359,6 +374,67 @@ fn install_dotfiles() -> std::io::Result<String> {
     }
 
     Ok(format!("Dotfiles Installed"))
+}
+
+fn user_extras() -> std::io::Result<String> {
+    let username: String = get_current_username().unwrap().to_str().unwrap().into();
+
+    let commands = vec![
+        "sudo systemctl enable --now bluetooth && sudo systemctl enable sddm",
+        "systemctl --user enable --now pipewire",
+        "systemctl enable --now pipewire-pulse",
+        format!("echo -e '[Autologin]\nUser={}\nSession=hyprland' | sudo tee -a /etc/sddm.conf", username)
+        format!("sudo groupadd autologin && sudo usermod -aG autologin {}", username)
+        "sudo timedatectl set-ntp true && sudo timedatectl set-timezone Europe/Amsterdam",
+    ];
+
+    for command in commands {
+        let output = Command::new("sh")
+            .arg("-c")
+            .arg(&command)
+            .output()
+            .expect("Failed to execute command");
+
+        if !output.status.success() {
+            eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
+            std::process::exit(1);
+        }
+
+        println!("{}", String::from_utf8_lossy(&output.stdout));
+    }
+
+
+    Ok(format!("Extra's Done"))
+}
+
+fn user_extras_stetsed() -> std::io::Result<String> {
+    let username: String = get_current_username().unwrap().to_str().unwrap().into();
+
+    let commands = vec![
+        "echo '10.4.78.251:/mnt/Vault/Storage /mnt/data nfs defaults,_netdev,x-systemd.automount,x-systemd.mount-timeout=10,noauto 0 0' | sudo tee -a /etc/fstab",
+        "sudo mkdir /mnt/data",
+        "sudo mount -t nfs 10.4.78.251:/mnt/Vault/Storage /mnt/data"
+        "ln -s /mnt/data/Stetsed/Storage ~/Storage",
+        "ln -s /mnt/data/Stetsed/Documents ~/Documents",
+    ];
+
+    for command in commands {
+        let output = Command::new("sh")
+            .arg("-c")
+            .arg(&command)
+            .output()
+            .expect("Failed to execute command");
+
+        if !output.status.success() {
+            eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
+            std::process::exit(1);
+        }
+
+        println!("{}", String::from_utf8_lossy(&output.stdout));
+    }
+
+
+    Ok(format!("Stetsed Extra's Done")) 
 }
 
 fn transfer() {
