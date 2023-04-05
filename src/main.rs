@@ -284,7 +284,7 @@ fn chroot_install(username: &str, password: &str) -> std::io::Result<String> {
 
 
 fn user(){
-    yay_packages();
+    //yay_packages();
 
     install_dotfiles();
 }
@@ -323,8 +323,8 @@ fn install_dotfiles() -> std::io::Result<String> {
     io::stdin().read_line(&mut input).unwrap();
 
     if input.trim().eq_ignore_ascii_case("y") {
-        let dotfiles_url = "https://github.com/Stetsed/.dotfiles.git".to_owned();
-        let ssh_url = "git@github.com:Stetsed/.dotfiles.git".to_owned();
+        dotfiles_url = "https://github.com/Stetsed/.dotfiles.git".to_owned();
+        ssh_url = "git@github.com:Stetsed/.dotfiles.git".to_owned();
     } else {
         // Ask the user for their github dotfiles repository
         print!("Enter your github dotfiles repository (username/repository_name): ");
@@ -338,7 +338,9 @@ fn install_dotfiles() -> std::io::Result<String> {
 
     let commands = vec![
         format!("git clone --bare {} $HOME/.dotfiles", dotfiles_url),
-        format!("function config {{ /usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME $@ }} && config checkout -f && config status.showUntrackedFiles no && config remote set-url origin {}", ssh_url),
+        "/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME checkout -f".to_string(),
+        "/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME config status.showUntrackedFiles no".to_string(),
+        format!("/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME config remote set-url origin git@github.com:{}.git", ssh_url),
     ];
 
     for command in commands {
