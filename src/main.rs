@@ -414,8 +414,8 @@ fn user_extras_stetsed() -> std::io::Result<String> {
         "sudo mount -t nfs 10.4.78.251:/mnt/Vault/Storage /mnt/data",
         "ln -s /mnt/data/Stetsed/Storage ~/Storage",
         "ln -s /mnt/data/Stetsed/Documents ~/Documents",
-        "echo -e '[Autologin]\nUser={}\nSession=hyprland' | sudo tee -a /etc/sddm.conf",
-        "sudo groupadd autologin && sudo usermod -aG autologin {}",
+        "echo -e '[Autologin]\nUser=Stetsed\nSession=hyprland' | sudo tee -a /etc/sddm.conf",
+        "sudo groupadd autologin && sudo usermod -aG autologin Stetsed",
     ];
 
     for command in commands {
