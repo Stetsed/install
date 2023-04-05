@@ -285,9 +285,9 @@ fn chroot_install(username: &str, password: &str) -> std::io::Result<String> {
 
 
 fn user(){
-    //user_yay_packages();
+    user_yay_packages();
 
-    //user_install_dotfiles();
+    user_install_dotfiles();
 
     user_extras();
 
@@ -302,6 +302,8 @@ fn user(){
     }
     
     print!("Thank you for using Stetsed's Installer! Hope it helped you! :");
+
+    std::process::exit(0);
 }
 
 fn user_yay_packages() -> std::io::Result<String>  {
