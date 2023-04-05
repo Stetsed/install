@@ -41,7 +41,6 @@ fn no_flag_passed(){
         "4" => transfer(),
         _ => println!("Invalid choice"),
     }
-
 }
 
 fn zfs() {
@@ -225,18 +224,16 @@ fn zfs_setup_basesystem() -> std::io::Result<String> {
 
 fn chroot() {
     print!("Enter username: ");
-    io::stdout().flush()?;
+    io::stdout().flush();
     let mut username = String::new();
-    io::stdin().read_line(&mut username)?;
+    io::stdin().read_line(&mut username);
 
     print!("Enter password: ");
-    io::stdout().flush()?;
+    io::stdout().flush();
     let mut password = String::new();
-    io::stdin().read_line(&mut password)?;
+    io::stdin().read_line(&mut password);
 
-    chroot_install(username.trim(), password.trim())?;
-
-    chroot_install();
+    chroot_install(username.trim(), password.trim());
 }
 
 fn chroot_install(username: &str, password: &str) -> std::io::Result<String> {
