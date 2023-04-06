@@ -59,33 +59,24 @@ fn zfs() {
 
     zfs_setup_basesystem();
 
-    println!("ZFS and Chroot is now finished, press enter to reboot");
+    std::process::exit(0);
 
-    // Wait for user input
-    let mut buffer = String::new();
-    io::stdin().read_line(&mut buffer).unwrap();
 
-    // Reboot the system
-    let output = Command::new("sh")
-        .arg("-c")
-        .arg("reboot")
-        .output()
-        .expect("Failed to execute command");
-
-    if !output.status.success() {
-        eprintln!("Reboot failed with exit status: {:?}", output.status);
-        std::process::exit(1);
-    }
 }
 
 fn zfs_get_zfs() -> std::io::Result<String> {
     let output = Command::new("curl")
-        .arg("-s")
-        .arg("https://raw.githubusercontent.com/eoli3n/archiso-zfs/master/init")
-        .stdout(std::process::Stdio::piped())
-        .spawn()?
-        .stdout
-        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "Could not capture stdout"))?;
+        .args(&["-s", "https://raw.githubusercontent.com/eoli3n/archiso-zfs/master/init"])
+        .output()
+        .expect("failed to execute curl command");
+
+    let output_str = String::from_utf8_lossy(&output.stdout);
+
+    let status = Command::new("bash")
+        .arg("-c")
+        .arg(output_str.trim())
+        .status()
+        .expect("failed to execute bash command");
 
     Ok(format!("Installed ZFS"))
 }
@@ -130,8 +121,7 @@ fn zfs_select_drive() -> Result<String, std::io::Error> {
 
 fn zfs_partition_drive(drive: &str) -> std::io::Result<String> {
     let commands = vec![
-        format!("zpool labelclear -f /dev/disk/by-id/{}", drive),
-        format!("blkdiscard /dev/disk/by-id/{}", drive),
+        format!("blkdiscard -f /dev/disk/by-id/{}", drive),
         format!("sgdisk -n 1:0:+512M -t 1:EF00 -c 1:EFI /dev/disk/by-id/{}",drive),
         format!("sgdisk -n 2:0:0 -t 2:BF01 -c 2:ZFS /dev/disk/by-id/{}", drive),
         format!("mkfs.vfat -F32 /dev/disk/by-id/{}-part1", drive),
@@ -158,7 +148,7 @@ fn zfs_partition_drive(drive: &str) -> std::io::Result<String> {
 
 fn zfs_setup_filesystem(drive: &str) -> std::io::Result<String> {
     let commands = vec![
-        format!("zpool create -f -o ashift=12 -O canmount=off -O acltype=posixacl -O compression=on -O atime=off -O xattr=sa zroot /dev/disk/by-id/{}", drive),
+        format!("zpool create -f -o ashift=12 -O canmount=off -O acltype=posixacl -O compression=on -O atime=off -O xattr=sa zroot /dev/disk/by-id/{}-part2", drive),
         "zfs create -o canmount=off -o mountpoint=none zroot/ROOT".to_string(),
         "zfs create -o canmount=noauto -o mountpoint=/ zroot/ROOT/default".to_string(),
         "zfs create -o mountpoint=none zroot/data".to_string(),
@@ -167,7 +157,6 @@ fn zfs_setup_filesystem(drive: &str) -> std::io::Result<String> {
         "zpool export zroot".to_string(),
         "zpool import -d /dev/disk/by-id -R /mnt zroot".to_string(),
         "zfs mount zroot/ROOT/default".to_string(),
-        "zfs mount zroot/data/home".to_string(),
         "zpool set bootfs=zroot/ROOT/default zroot".to_string(),
         "mkdir /mnt/boot".to_string(),
         format!("mount /dev/disk/by-id/{}-part1 /mnt/boot", drive),
@@ -200,7 +189,6 @@ fn zfs_setup_basesystem() -> std::io::Result<String> {
         "genfstab -U /mnt >> /mnt/etc/fstab".to_string(),
         "pacstrap /mnt base base-devel linux linux-firmware neovim networkmanager intel-ucode".to_string(),
         "cp install /mnt/install".to_string(),
-        "arch-chroot /mnt /install --chroot".to_string(),
     ];
 
     for command in commands {
@@ -246,10 +234,10 @@ fn chroot_install(username: &str, password: &str) -> std::io::Result<String> {
         "pacman-key -r DDF7DB817396A49B2A2723F7403BD972F75D9D76".to_string(),
         "pacman-key --lsign-key DDF7DB817396A49B2A2723F7403BD972F75D9D76".to_string(),
         "pacman -Syu --noconfirm".to_string(),
-        "pacman -S linux-headers zfs-dkms openssh networkmanager fish git".to_string(),
+        "pacman -S --noconfirm nfs-utils linux-headers zfs-dkms openssh networkmanager fish git".to_string(),
         format!("useradd -m -G wheel -s /usr/bin/fish {}", username),
         format!("(echo '{}'; echo '{}') | passwd {}", password, password, username),
-        "zpool set cachefile=/etc/zfs/zpool.cache".to_string(),
+        "zpool set cachefile=/etc/zfs/zpool.cache zroot".to_string(),
         "bootctl install".to_string(),
         "systemctl enable NetworkManager".to_string(),
         "echo -e 'title Arch Linux\nlinux vmlinuz-linux\ninitrd intel-ucode.img\ninitrd initramfs-linux.img\noptions zfs=zroot/ROOT/default rw' > /boot/loader/entries/arch.conf".to_string(),
@@ -285,6 +273,8 @@ fn chroot_install(username: &str, password: &str) -> std::io::Result<String> {
 
 
 fn user(){
+    user_create_home();
+
     user_yay_packages();
 
     user_install_dotfiles();
@@ -306,11 +296,48 @@ fn user(){
     std::process::exit(0);
 }
 
-fn user_yay_packages() -> std::io::Result<String>  {
+fn user_create_home() -> std::io::Result<String>  {
+   let output = Command::new("whoami")
+        .output()
+        .expect("failed to execute process");
+
+    let whoami_output = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
     let commands = vec![
-        "git clone https://aur.archlinux.org/yay-bin.git".to_string(),
-        "cd yay-bin && makepkg -s && sudo pacman -U --noconfirm yay-bin* && cd .. && rm -rf yay-bin".to_string(),
-        "yay -Syu --noconfirm --answerdiff=None nfs-utils ripgrep unzip bat pavucontrol pipewire-pulse dunst bluedevil bluez-utils brightnessctl grimblast-git neovim network-manager-applet rofi-lbonn-wayland-git starship thunar thunar-archive-plugin thunar-volman  webcord-bin wl-clipboard librewolf-bin neofetch swaybg waybar-hyprland-git nfs-utils btop tldr swaylock-effects obsidian fish hyprland-bin npm xdg-desktop-portal-hyprland-git exa noto-fonts-emoji qt5-wayland qt6-wayland blueman swappy playerctl wlogout sddm-git nano ttf-jetbrains-mono-nerd lazygit swayidle".to_string(),
+        format!("sudo mkdir /home/{}", whoami_output),
+        format!("sudo chown {}:{} -R /home/{}", whoami_output, whoami_output, whoami_output),
+        format!("sudo chmod 700 /home/{}", whoami_output),
+    ];
+
+    for command in commands {
+        let output = Command::new("sh")
+            .arg("-c")
+            .arg(&command)
+            .output()
+            .expect("Failed to execute command");
+
+        if !output.status.success() {
+            eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
+            std::process::exit(1);
+        }
+
+        println!("{}", String::from_utf8_lossy(&output.stdout));
+    }
+    Ok(format!("Home Created"))
+}
+
+
+fn user_yay_packages() -> std::io::Result<String>  {
+   let output = Command::new("whoami")
+        .output()
+        .expect("failed to execute process");
+
+    let whoami_output = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+    let commands = vec![
+        format!("cd /home/{} && git clone https://aur.archlinux.org/yay-bin.git", whoami_output),
+        format!("cd /home/{} && cd yay-bin && makepkg -s && sudo pacman -U --noconfirm yay-bin* && cd .. && rm -rf yay-bin", whoami_output),
+        "yay -Syu --noconfirm --answerdiff=None kitty ripgrep unzip bat pavucontrol pipewire-pulse dunst bluedevil bluez-utils brightnessctl grimblast-git neovim network-manager-applet rofi-lbonn-wayland-git starship thunar thunar-archive-plugin thunar-volman  webcord-bin wl-clipboard librewolf-bin neofetch swaybg waybar-hyprland-git btop tldr swaylock-effects obsidian fish hyprland-bin npm xdg-desktop-portal-hyprland-git exa noto-fonts-emoji qt5-wayland qt6-wayland blueman swappy playerctl wlogout sddm-git nano ttf-jetbrains-mono-nerd lazygit swayidle".to_string(),
     ];
 
     for command in commands {
@@ -357,7 +384,7 @@ fn user_install_dotfiles() -> std::io::Result<String> {
         format!("git clone --bare {} $HOME/.dotfiles", dotfiles_url),
         "/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME checkout -f".to_string(),
         "/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME config status.showUntrackedFiles no".to_string(),
-        format!("/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME config remote set-url origin git@github.com:{}.git", ssh_url),
+        format!("/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME config remote set-url origin {}", ssh_url),
     ];
 
     for command in commands {
@@ -379,8 +406,6 @@ fn user_install_dotfiles() -> std::io::Result<String> {
 }
 
 fn user_extras() -> std::io::Result<String> {
-    let username: &str = get_current_username().unwrap().to_str().unwrap();
-
     let commands = vec![
         "sudo systemctl enable --now bluetooth && sudo systemctl enable sddm",
         "systemctl --user enable --now pipewire",
@@ -414,8 +439,8 @@ fn user_extras_stetsed() -> std::io::Result<String> {
         "sudo mount -t nfs 10.4.78.251:/mnt/Vault/Storage /mnt/data",
         "ln -s /mnt/data/Stetsed/Storage ~/Storage",
         "ln -s /mnt/data/Stetsed/Documents ~/Documents",
-        "echo -e '[Autologin]\nUser=Stetsed\nSession=hyprland' | sudo tee -a /etc/sddm.conf",
-        "sudo groupadd autologin && sudo usermod -aG autologin Stetsed",
+        "echo -e '[Autologin]\nUser=stetsed\nSession=hyprland' | sudo tee -a /etc/sddm.conf",
+        "sudo groupadd autologin && sudo usermod -aG autologin stetsed",
     ];
 
     for command in commands {
