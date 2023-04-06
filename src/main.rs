@@ -4,8 +4,6 @@ use std::process::Command;
 use std::fs;
 use std::thread;
 use std::time::Duration;
-use users::{get_current_username};
-use std::ffi::OsString;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -16,7 +14,6 @@ fn main() {
                 "--zfs" => zfs(),
                 "--chroot" => chroot(),
                 "--user" => user(),
-                "--transfer" => transfer(),
                 _ => print!("Invalid Flag Passed"),
             }
         }
@@ -30,7 +27,6 @@ fn no_flag_passed(){
     println!("1. ZFS");
     println!("2. Chroot");
     println!("3. User");
-    println!("4. Transfer");
 
     let mut choice = String::new();
 
@@ -40,7 +36,6 @@ fn no_flag_passed(){
         "1" => zfs(),
         "2" => chroot(),
         "3" => user(),
-        "4" => transfer(),
         _ => println!("Invalid choice"),
     }
 }
@@ -72,7 +67,7 @@ fn zfs_get_zfs() -> std::io::Result<String> {
 
     let output_str = String::from_utf8_lossy(&output.stdout);
 
-    let status = Command::new("bash")
+    Command::new("bash")
         .arg("-c")
         .arg(output_str.trim())
         .status()
@@ -461,10 +456,3 @@ fn user_extras_stetsed() -> std::io::Result<String> {
 
     Ok(format!("Stetsed Extra's Done")) 
 }
-
-fn transfer() {
-    println!("You chose Transfer");
-    // Run Transfer function here
-}
-
-
