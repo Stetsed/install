@@ -224,7 +224,7 @@ fn chroot() {
     print!("Enter your Platform in Lower Case(intel/amd): ");
     io::stdout().flush();
     let mut platform = String::new();
-    io::stdin().read_line(&mut platform);)
+    io::stdin().read_line(&mut platform);
 
     // Call the chroot_install() function to install packages and configure the ZFS filesystem
     chroot_install(username.trim(), password.trim(), platform.trim());
