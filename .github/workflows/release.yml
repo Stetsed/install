@@ -47,5 +47,4 @@ jobs:
           target/release/YOUR_BINARY_NAME # Replace with your actual binary name
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        echo "Creating a new release for v${{ steps.check_version.outputs.version }}"
+
