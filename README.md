@@ -18,7 +18,7 @@ First we ask for the username and password the user wants that will be used to c
 
 After this we set the zpool cachefile, install the bootloader, enable networkmanager, add our systemd-boot entry. We set the default for systemd-boot, we make it so wheel users have sudo acces, enable some ZFS services, add zfs to the mkinitcpio.conf and rebuild them. And then we are done with the Chroot Stage.
 
-## Setup User
+### Setup User
 
 In this function we start by making our home directory because of some apparent ZFS problems our home directory gets deleted. We go ahead and make our home directory. Now we go ahead and install the yay AUR helper to be able to install AUR packages. And then we install the packages that belong to my dotfiles, this may be changed in the future (Check To Do). 
 
@@ -31,5 +31,5 @@ After this you can either choose to install my Dotfiles, or enter your own dotfi
 - [x] ZFS Stage
 - [x] Chroot Stage
 - [x] User Stage
-- [] Grab package list from repository
-- [] Try to use more rust native code instead of terminal commands.
+- [ ] Grab package list from repository
+- [ ] Try to use more rust native code instead of terminal commands.
