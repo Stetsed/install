@@ -61,6 +61,27 @@ fn zfs() {
     std::process::exit(0);
 }
 
+
+fn execute_command(command: &str) -> std::io::Result<()> {
+    let output = Command::new("sh")
+        .arg("-c")
+        .arg(&command)
+        .output()
+        .expect("Failed to execute command");
+
+    if !output.status.success() {
+        eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
+        std::process::exit(1);
+    }
+
+    println!("{}", String::from_utf8_lossy(&output.stdout));
+
+    thread::sleep(Duration::from_secs(3));
+
+    Ok(())
+}
+
+
 // Function to download and install ZFS.
 fn zfs_get_zfs() -> std::io::Result<String> {
     // Execute the curl command to download the ZFS installation script.
@@ -133,23 +154,7 @@ fn zfs_partition_drive(drive: &str) -> std::io::Result<String> {
 
     // Iterate through the vector of commands and execute them sequentially
     for command in commands {
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(&command)
-            .output()
-            .expect("Failed to execute command");
-
-        // If the command fails, print an error message and exit the program
-        if !output.status.success() {
-            eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
-            std::process::exit(1);
-        }
-
-        // Print the output of the command to the console
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-
-        // Wait for 3 seconds before executing the next command
-        thread::sleep(Duration::from_secs(3));
+        execute_command(&command);
     }
 
     // Return a message indicating that the disk has been formatted
@@ -177,23 +182,7 @@ fn zfs_setup_filesystem(drive: &str) -> std::io::Result<String> {
 
     // Iterate through the vector of commands and execute them sequentially
     for command in commands {
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(&command)
-            .output()
-            .expect("Failed to execute command");
-
-        // If the command fails, print an error message and exit the program
-        if !output.status.success() {
-            eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
-            std::process::exit(1);
-        }
-
-        // Print the output of the command to the console
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-
-        // Wait for 3 seconds before executing the next command
-        thread::sleep(Duration::from_secs(3));
+        execute_command(&command);
     }
 
     // Return a message indicating that the ZFS filesystem has been set up
@@ -211,23 +200,7 @@ fn zfs_setup_basesystem() -> std::io::Result<String> {
 
     // Iterate through the vector of commands and execute them sequentially
     for command in commands {
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(&command)
-            .output()
-            .expect("Failed to execute command");
-
-        // If the command fails, print an error message and exit the program
-        if !output.status.success() {
-            eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
-            std::process::exit(1);
-        }
-
-        // Print the output of the command to the console
-        println!("{}", String::from_utf8_lossy(&output.stdout));
-
-        // Wait for 3 seconds before executing the next command
-        thread::sleep(Duration::from_secs(3));
+        execute_command(&command);
     }
 
     // Return a message indicating that the base system setup is complete
@@ -284,18 +257,7 @@ fn chroot_install(username: &str, password: &str) -> std::io::Result<String> {
 
     // Execute the commands in the vector
     for command in commands {
-        let output = Command::new("sh")
-                .arg("-c")
-                .arg(&command)
-                .output()
-                .expect("Failed to execute command");
-
-        // Check if the command was successful and print its output
-        if !output.status.success() {
-            eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
-            std::process::exit(1);
-        }
-        println!("{}", String::from_utf8_lossy(&output.stdout));
+        execute_command(&command);
     }
 
     // Return a `String` indicating the completion of the operation
@@ -348,18 +310,7 @@ fn user_create_home() -> std::io::Result<String>  {
 
     // Execute the commands in the vector
     for command in commands {
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(&command)
-            .output()
-            .expect("Failed to execute command");
-
-        // Check if the command was successful and print its output
-        if !output.status.success() {
-            eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
-            std::process::exit(1);
-        }
-        println!("{}", String::from_utf8_lossy(&output.stdout));
+        execute_command(&command);
     }
 
     // Return a `String` indicating the completion of the operation
@@ -384,20 +335,7 @@ fn user_yay_packages() -> std::io::Result<String>  {
     ];
 
     for command in commands {
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(&command)
-            .output()
-            .expect("Failed to execute command");
-
-        if !output.status.success() {
-            // If a command fails, print an error message and exit
-            eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
-            std::process::exit(1);
-        }
-
-        // Print the output of the command
-        println!("{}", String::from_utf8_lossy(&output.stdout));
+        execute_command(&command);
     }
     Ok(format!("Yay and Packages Installed"))
 }
@@ -440,19 +378,7 @@ fn user_install_dotfiles() -> std::io::Result<String> {
 
     // Loop through the commands and execute each one
     for command in commands {
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(&command)
-            .output()
-            .expect("Failed to execute command"); // Execute the command and print an error message if it fails
-
-        // If the command fails, print an error message and exit with status code 1
-        if !output.status.success() {
-            eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
-            std::process::exit(1);
-        }
-
-        println!("{}", String::from_utf8_lossy(&output.stdout)); // Print the output of the command
+        execute_command(&command);
     }
 
     Ok(format!("Dotfiles Installed")) // Return a success message
@@ -471,19 +397,7 @@ fn user_extras() -> std::io::Result<String> {
 
     // Loop through the commands and execute each one
     for command in commands {
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(&command)
-            .output()
-            .expect("Failed to execute command"); // Execute the command and print an error message if it fails
-
-        // If the command fails, print an error message and exit with status code 1
-        if !output.status.success() {
-            eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
-            std::process::exit(1);
-        }
-
-        println!("{}", String::from_utf8_lossy(&output.stdout)); // Print the output of the command
+        execute_command(&command);
     }
 
     Ok(format!("Extra's Done")) // Return a success message
@@ -505,19 +419,7 @@ fn user_extras_stetsed() -> std::io::Result<String> {
 
     // Loop through the commands and execute each one
     for command in commands {
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(&command)
-            .output()
-            .expect("Failed to execute command"); // Execute the command and print an error message if it fails
-
-        // If the command fails, print an error message and exit with status code 1
-        if !output.status.success() {
-            eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
-            std::process::exit(1);
-        }
-
-        println!("{}", String::from_utf8_lossy(&output.stdout));
+        execute_command(&command);
     }
     Ok(format!("Stetsed Extra's Done")) // Return a success message
 }
