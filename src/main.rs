@@ -194,7 +194,7 @@ fn zfs_setup_basesystem() -> std::io::Result<String> {
     // Define a vector of commands to execute
     let commands = vec![
         "genfstab -U /mnt >> /mnt/etc/fstab".to_string(), // Generate the fstab file
-        "pacstrap /mnt base base-devel linux linux-firmware neovim networkmanager intel-ucode".to_string(), // Install packages
+        "pacstrap /mnt base base-devel linux linux-firmware neovim networkmanager".to_string(), // Install packages
         "cp install /mnt/install".to_string(), // Copy the installation script to the ZFS filesystem
     ];
 
@@ -221,8 +221,13 @@ fn chroot() {
     let mut password = String::new();
     io::stdin().read_line(&mut password);
 
+    print!("Enter your Platform in Lower Case(intel/amd): ");
+    io::stdout().flush();
+    let mut platform = String::new();
+    io::stdin().read_line(&mut platform);)
+
     // Call the chroot_install() function to install packages and configure the ZFS filesystem
-    chroot_install(username.trim(), password.trim());
+    chroot_install(username.trim(), password.trim(), platform.trim());
 
     // Exit the program
     std::process::exit(0);
@@ -230,20 +235,20 @@ fn chroot() {
 
 // This function installs packages and configures the ZFS filesystem in a chroot environment by executing a sequence of shell commands using `Command` from the standard library. The commands add a repository, install packages, create a user, set up a cache file, configure the bootloader, enable services, and generate an initramfs. The function takes a username and password as input and returns a `String` indicating the completion of the operation.
 
-fn chroot_install(username: &str, password: &str) -> std::io::Result<String> {
+fn chroot_install(username: &str, password: &str, platform: &str) -> std::io::Result<String> {
     // Define a vector of shell commands to execute
     let commands = vec![
         "echo -e '[archzfs]\nServer = https://archzfs.com/$repo/$arch' >>/etc/pacman.conf".to_string(), // Add a repository
         "pacman-key -r DDF7DB817396A49B2A2723F7403BD972F75D9D76".to_string(), // Add a repository key
         "pacman-key --lsign-key DDF7DB817396A49B2A2723F7403BD972F75D9D76".to_string(), // Sign the repository key
         "pacman -Syu --noconfirm".to_string(), // Update the system
-        "pacman -S --noconfirm nfs-utils linux-headers zfs-dkms openssh networkmanager fish git".to_string(), // Install packages
+        format!("pacman -S --noconfirm nfs-utils linux-headers zfs-dkms openssh networkmanager fish git {}-ucode", &platform), // Install packages
         format!("useradd -m -G wheel -s /usr/bin/fish {}", username), // Create a user
         format!("(echo '{}'; echo '{}') | passwd {}", password, password, username), // Set the user password
         "zpool set cachefile=/etc/zfs/zpool.cache zroot".to_string(), // Set up the cache file
         "bootctl install".to_string(), // Install the bootloader
         "systemctl enable NetworkManager".to_string(), // Enable NetworkManager service
-        "echo -e 'title Arch Linux\nlinux vmlinuz-linux\ninitrd intel-ucode.img\ninitrd initramfs-linux.img\noptions zfs=zroot/ROOT/default rw' > /boot/loader/entries/arch.conf".to_string(), // Configure the bootloader
+        format!("echo -e 'title Arch Linux\nlinux vmlinuz-linux\ninitrd {}-ucode.img\ninitrd initramfs-linux.img\noptions zfs=zroot/ROOT/default rw' > /boot/loader/entries/arch.conf", &platform), // Configure the bootloader
         "echo 'default arch' >> /boot/loader/loader.conf".to_string(), // Configure the bootloader
         "echo '%wheel ALL=(ALL:ALL) ALL' >> /etc/sudoers".to_string(), // Allow wheel group to execute sudo
         "systemctl enable zfs-scrub-weekly@zroot.timer".to_string(), // Enable ZFS scrub timer
