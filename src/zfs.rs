@@ -20,26 +20,6 @@ pub fn zfs() {
 }
 
 
-pub fn execute_command(command: &str) -> std::io::Result<()> {
-    let output = Command::new("sh")
-        .arg("-c")
-        .arg(&command)
-        .output()
-        .expect("Failed to execute command");
-
-    if !output.status.success() {
-        eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
-        std::process::exit(1);
-    }
-
-    println!("{}", String::from_utf8_lossy(&output.stdout));
-
-    thread::sleep(Duration::from_secs(3));
-
-    Ok(())
-}
-
-
 // Function to download and install ZFS.
 pub fn zfs_get_zfs() -> std::io::Result<String> {
     // Execute the curl command to download the ZFS installation script.
@@ -165,3 +145,21 @@ fn zfs_setup_basesystem() -> std::io::Result<String> {
     Ok(format!("Setup basesystem done"))
 }
 
+pub fn execute_command(command: &str) -> std::io::Result<()> {
+    let output = Command::new("sh")
+        .arg("-c")
+        .arg(&command)
+        .output()
+        .expect("Failed to execute command");
+
+    if !output.status.success() {
+        eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
+        std::process::exit(1);
+    }
+
+    println!("{}", String::from_utf8_lossy(&output.stdout));
+
+    thread::sleep(Duration::from_secs(3));
+
+    Ok(())
+}
