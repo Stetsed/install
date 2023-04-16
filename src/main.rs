@@ -336,7 +336,7 @@ fn user_yay_packages() -> std::io::Result<String>  {
         // Build and install the yay package manager
         format!("cd /home/{} && cd yay-bin && makepkg -s && sudo pacman -U --noconfirm yay-bin* && cd .. && rm -rf yay-bin", whoami_output),
         // Install packages using yay
-        "yay -Syu --noconfirm --answerdiff=None imagemagick kitty ripgrep unzip bat pavucontrol pipewire-pulse dunst bluedevil bluez-utils brightnessctl grimblast-git neovim network-manager-applet rofi-lbonn-wayland-git starship thunar thunar-archive-plugin thunar-volman  webcord-bin wl-clipboard librewolf-bin neofetch swaybg waybar-hyprland-git btop tldr swaylock-effects obsidian fish hyprland-bin npm xdg-desktop-portal-hyprland-git exa noto-fonts-emoji qt5-wayland qt6-wayland blueman swappy playerctl wlogout sddm-git nano ttf-jetbrains-mono-nerd lazygit swayidle".to_string(),
+        "yay -Syu --noconfirm --answerdiff=None imagemagick kitty ripgrep unzip bat pavucontrol pipewire-pulse dunst bluedevil bluez-utils brightnessctl grimblast-git neovim network-manager-applet rofi-lbonn-wayland-git starship thunar thunar-archive-plugin thunar-volman  webcord-bin wl-clipboard librewolf-bin neofetch swaybg waybar-hyprland-git btop tldr swaylock-effects obsidian fish hyprland npm xdg-desktop-portal-hyprland-git exa noto-fonts-emoji qt5-wayland qt6-wayland blueman swappy playerctl wlogout sddm-git nano ttf-jetbrains-mono-nerd lazygit swayidle".to_string(),
     ];
 
     for command in commands {
