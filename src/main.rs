@@ -1,17 +1,9 @@
-mod zfs;
 mod chroot;
 mod user;
+mod zfs;
 
-use std::io::{self, Write};
 use std::env;
-use std::process::Command;
-use std::fs;
-use std::thread;
-use std::time::Duration;
-
-use zfs::*;
-use chroot::*;
-use user::*;
+use std::io;
 
 fn main() {
     // Collect command line arguments into a vector of strings.
@@ -35,7 +27,7 @@ fn main() {
 }
 
 // Function to prompt the user for input when no flag is provided.
-fn no_flag_passed(){
+fn no_flag_passed() {
     println!("Choose an option:");
     println!("1. ZFS");
     println!("2. Chroot");
@@ -43,7 +35,9 @@ fn no_flag_passed(){
 
     // Read user input and call the appropriate function based on the user's choice.
     let mut choice = String::new();
-    io::stdin().read_line(&mut choice).expect("Failed to read line");
+    io::stdin()
+        .read_line(&mut choice)
+        .expect("Failed to read line");
 
     match choice.trim() {
         "1" => zfs::zfs(),
