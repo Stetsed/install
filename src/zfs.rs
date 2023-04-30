@@ -1,30 +1,32 @@
+use std::fs;
 use std::io::{self, Write};
 use std::process::Command;
-use std::fs;
 use std::thread;
 use std::time::Duration;
 
 pub fn zfs() {
     // Call the necessary sub-functions in the correct order.
-    zfs_get_zfs();
+    zfs_get_zfs().expect("Failed to install ZFS");
     let selected_drive = zfs_select_drive().unwrap_or_else(|err| {
         eprintln!("Failed to select drive: {}", err);
         String::new()
     });
-    zfs_partition_drive(&selected_drive);
-    zfs_setup_filesystem(&selected_drive);
-    zfs_setup_basesystem();
+    zfs_partition_drive(&selected_drive).expect("Failed to partition drive");
+    zfs_setup_filesystem(&selected_drive).expect("Failed to setup filesystem");
+    zfs_setup_basesystem().expect("Failed to setup basesystem");
 
     // Exit the program with a successful status code.
     std::process::exit(0);
 }
 
-
 // Function to download and install ZFS.
 pub fn zfs_get_zfs() -> std::io::Result<String> {
     // Execute the curl command to download the ZFS installation script.
     let output = Command::new("curl")
-        .args(&["-s", "https://raw.githubusercontent.com/eoli3n/archiso-zfs/master/init"])
+        .args(&[
+            "-s",
+            "https://raw.githubusercontent.com/eoli3n/archiso-zfs/master/init",
+        ])
         .output()
         .expect("failed to execute curl command");
 
@@ -71,10 +73,14 @@ pub fn zfs_select_drive() -> Result<String, std::io::Error> {
     io::stdout().flush()?;
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
-    let index = input.trim().parse::<usize>().map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+    let index = input
+        .trim()
+        .parse::<usize>()
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
 
     // Return the selected device
-    let selected_device = devices.get(index - 1)
+    let selected_device = devices
+        .get(index - 1)
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Invalid selection"))?;
 
     Ok(selected_device.clone())
@@ -85,14 +91,20 @@ pub fn zfs_partition_drive(drive: &str) -> std::io::Result<String> {
     // Define a vector of commands to execute
     let commands = vec![
         format!("blkdiscard -f /dev/disk/by-id/{}", drive), // Erase all data on the drive
-        format!("sgdisk -n 1:0:+512M -t 1:EF00 -c 1:EFI /dev/disk/by-id/{}",drive), // Create a 512MB partition for EFI
-        format!("sgdisk -n 2:0:0 -t 2:BF01 -c 2:ZFS /dev/disk/by-id/{}", drive), // Create a partition for ZFS
+        format!(
+            "sgdisk -n 1:0:+512M -t 1:EF00 -c 1:EFI /dev/disk/by-id/{}",
+            drive
+        ), // Create a 512MB partition for EFI
+        format!(
+            "sgdisk -n 2:0:0 -t 2:BF01 -c 2:ZFS /dev/disk/by-id/{}",
+            drive
+        ), // Create a partition for ZFS
         format!("mkfs.vfat -F32 /dev/disk/by-id/{}-part1", drive), // Format the EFI partition with FAT32
     ];
 
     // Iterate through the vector of commands and execute them sequentially
     for command in commands {
-        execute_command(&command);
+        execute_command(&command)?;
     }
 
     // Return a message indicating that the disk has been formatted
@@ -120,7 +132,7 @@ pub fn zfs_setup_filesystem(drive: &str) -> std::io::Result<String> {
 
     // Iterate through the vector of commands and execute them sequentially
     for command in commands {
-        execute_command(&command);
+        execute_command(&command)?;
     }
 
     // Return a message indicating that the ZFS filesystem has been set up
@@ -138,7 +150,7 @@ fn zfs_setup_basesystem() -> std::io::Result<String> {
 
     // Iterate through the vector of commands and execute them sequentially
     for command in commands {
-        execute_command(&command);
+        execute_command(&command)?;
     }
 
     // Return a message indicating that the base system setup is complete
@@ -153,7 +165,10 @@ pub fn execute_command(command: &str) -> std::io::Result<()> {
         .expect("Failed to execute command");
 
     if !output.status.success() {
-        eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
+        eprintln!(
+            "Command '{}' failed with exit status: {:?}",
+            command, output.status
+        );
         std::process::exit(1);
     }
 

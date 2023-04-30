@@ -1,7 +1,5 @@
 use std::io::{self, Write};
-use std::env;
 use std::process::Command;
-use std::fs;
 use std::thread;
 use std::time::Duration;
 
@@ -73,7 +71,10 @@ pub fn execute_command(command: &str) -> std::io::Result<()> {
         .expect("Failed to execute command");
 
     if !output.status.success() {
-        eprintln!("Command '{}' failed with exit status: {:?}", command, output.status);
+        eprintln!(
+            "Command '{}' failed with exit status: {:?}",
+            command, output.status
+        );
         std::process::exit(1);
     }
 
