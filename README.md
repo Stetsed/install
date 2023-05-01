@@ -1,3 +1,5 @@
+# This project is archived as I have concluded that it's not really needed when I can just use a shell script, it was useful to learn the basics of rust with but besides that is too annoying to maintain compared to a shell script.
+
 # Stetsed's ZFS Arch Linux Installer
 
 Welcome to a little side project I am doing which is implementing my previosly Bash script found [here](https://github.com/Stetsed/.dotfiles/blob/main/.bin/fullinstall.sh), into Rust. Sadly what I found is that most of the stuff that I am doing requires me to just execute it via the terminal. But I have tried to go with Rust Native functions when I can. This is my first time using Rust so it's still a learning journey.
